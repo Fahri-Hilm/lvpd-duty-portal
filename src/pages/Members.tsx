@@ -44,7 +44,6 @@ export default function Members() {
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Nama</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Codename</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pangkat</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Role</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Status</th>
             </tr>
           </thead>
@@ -54,7 +53,6 @@ export default function Members() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">{member.full_name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-cyan-400">{member.codename ?? '—'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-400">{member.rank}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-500">{member.role}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <span className={`inline-flex items-center px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${statusColor[member.status] ?? statusColor.offline}`}>
                     {member.status}
