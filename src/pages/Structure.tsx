@@ -22,9 +22,28 @@ const cardVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const roleOrder: Profile['role'][] = ['admin', 'commander', 'analyst'];
-const roleLabel: Record<Profile['role'], string> = { admin: 'Admin', commander: 'Commander', analyst: 'Analyst' };
-const roleLevel: Record<Profile['role'], number> = { admin: 1, commander: 2, analyst: 3 };
+const rankHierarchy: { rank: string; level: number; label: string }[] = [
+  { rank: 'Jenderal Polisi', level: 1, label: 'Jenderal Polisi' },
+  { rank: 'Komisaris Jenderal Polisi', level: 2, label: 'Komisaris Jenderal Polisi' },
+  { rank: 'Inspektur Jenderal Polisi', level: 3, label: 'Inspektur Jenderal Polisi' },
+  { rank: 'Komisaris Besar Polisi', level: 4, label: 'Komisaris Besar Polisi' },
+  { rank: 'Ajun Komisaris Besar Polisi', level: 5, label: 'Ajun Komisaris Besar Polisi' },
+  { rank: 'Komisaris Polisi', level: 6, label: 'Komisaris Polisi' },
+  { rank: 'Ajun Komisaris Polisi', level: 7, label: 'Ajun Komisaris Polisi' },
+  { rank: 'Ajun Inspektur Polisi Satu', level: 8, label: 'Ajun Inspektur Polisi Satu' },
+  { rank: 'BRIPTU', level: 9, label: 'BRIPTU' },
+  { rank: 'Bhayangkara Satu', level: 10, label: 'Bhayangkara Satu' },
+];
+
+function getRankLevel(rank: string): number {
+  const match = rankHierarchy.find(r => r.rank === rank);
+  return match?.level ?? 99;
+}
+
+function getRankLabel(rank: string): string {
+  const match = rankHierarchy.find(r => r.rank === rank);
+  return match?.label ?? rank;
+}
 
 export default function Structure() {
   const reducedMotion = useReducedMotion();
@@ -37,14 +56,21 @@ export default function Structure() {
     fetchProfiles().then(setProfiles);
   }, []);
 
-  const grouped = roleOrder
-    .map(role => ({
-      role,
-      level: roleLevel[role],
-      label: roleLabel[role],
-      members: profiles.filter(p => p.role === role),
-    }))
-    .filter(g => g.members.length > 0);
+  const rankMap = new Map<string, Profile[]>();
+  profiles.forEach(p => {
+    const key = p.rank;
+    if (!rankMap.has(key)) rankMap.set(key, []);
+    rankMap.get(key)!.push(p);
+  });
+
+  const grouped = rankHierarchy
+    .filter(r => rankMap.has(r.rank))
+    .map(r => ({
+      rank: r.rank,
+      level: r.level,
+      label: r.label,
+      members: rankMap.get(r.rank)!,
+    }));
 
   const totalActive = profiles.filter(p => p.status === 'active' || p.status === 'deployed').length;
 
@@ -90,7 +116,7 @@ export default function Structure() {
       {view === 'bagan' && (
         <div className="space-y-0">
           {grouped.map((group, index) => (
-            <div key={group.role}>
+            <div key={group.rank}>
               {index > 0 && <CommandConnector />}
               <motion.section
                 initial={reducedMotion ? false : { opacity: 0, y: 24 }}
@@ -132,7 +158,6 @@ export default function Structure() {
                               className="mt-3 pt-3 border-t border-slate-800 text-left space-y-2 overflow-hidden">
                               <div className="text-[10px] space-y-1.5">
                                 <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="text-slate-300 font-semibold">{member.email}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="text-slate-300 font-semibold">{member.role}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Spesialisasi</span><span className="text-slate-300 font-semibold">{member.specialization?.join(', ') ?? '—'}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Misi</span><span className="text-slate-300 font-semibold">{member.mission_count}</span></div>
                               </div>
@@ -151,18 +176,17 @@ export default function Structure() {
 
       {view === 'list' && (
         <div className="border border-slate-800 bg-slate-950/80">
-          <div className="grid grid-cols-[1fr_100px_100px_80px] gap-4 px-6 py-3 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+          <div className="grid grid-cols-[1fr_120px_100px] gap-4 px-6 py-3 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
             <span>Nama</span>
             <span>Pangkat</span>
-            <span>Codename</span>
-            <span className="text-right">Role</span>
+            <span className="text-right">Codename</span>
           </div>
           {filteredProfiles.length === 0 ? (
             <EmptyState icon={Search} title="Tidak ditemukan" description="Tidak ada anggota yang cocok dengan pencarian Anda." />
           ) : (
             filteredProfiles.map(p => (
               <button key={p.id} onClick={() => setSelectedId(selectedId === p.id ? null : p.id)}
-                className={`w-full grid grid-cols-[1fr_100px_100px_80px] gap-4 px-6 py-4 text-left border-b border-slate-800/60 last:border-b-0 transition-colors ${selectedId === p.id ? 'bg-slate-800/40' : 'hover:bg-slate-800/20'}`}>
+                className={`w-full grid grid-cols-[1fr_120px_100px] gap-4 px-6 py-4 text-left border-b border-slate-800/60 last:border-b-0 transition-colors ${selectedId === p.id ? 'bg-slate-800/40' : 'hover:bg-slate-800/20'}`}>
                 <div>
                   <p className="text-sm font-semibold text-slate-200">{p.full_name}</p>
                   <AnimatePresence>
@@ -178,7 +202,6 @@ export default function Structure() {
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 self-center">{p.rank}</span>
                 <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-400 self-center">{p.codename ?? '—'}</span>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 text-right self-center">{p.role}</span>
               </button>
             ))
           )}
