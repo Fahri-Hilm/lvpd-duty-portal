@@ -79,12 +79,25 @@ export async function deleteProfile(id: string): Promise<boolean> {
 
 // ─── Duty Reports ───────────────────────────────────────
 
+export interface DutyRow {
+  id: string;
+  member_id: string;
+  duty_date: string;
+  on_duty_at: string;
+  off_duty_at: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  photos: { storage_path: string | null }[];
+}
+
 export async function fetchDuties(): Promise<DutyFaction[]> {
   if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('duty_reports')
     .select('*, duty_photos(storage_path)')
+    .is('deleted_at', null)
     .order('duty_date', { ascending: false })
     .limit(10);
 
@@ -103,6 +116,64 @@ export async function fetchDuties(): Promise<DutyFaction[]> {
     createdAt: d.created_at,
     publishedAt: d.status === 'approved' ? d.created_at : null,
   }));
+}
+
+export async function fetchDutyRows(): Promise<DutyRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('duty_reports')
+    .select('*, duty_photos(storage_path, id)')
+    .is('deleted_at', null)
+    .order('duty_date', { ascending: false })
+    .limit(20);
+
+  if (error || !data) return [];
+  return data;
+}
+
+export async function updateDuty(id: string, updates: {
+  duty_date?: string;
+  on_duty_at?: string;
+  off_duty_at?: string;
+  notes?: string;
+  status?: string;
+}): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from('duty_reports').update(updates).eq('id', id);
+  return !error;
+}
+
+export async function deleteDuty(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from('duty_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  return !error;
+}
+
+export async function uploadDutyPhoto(dutyReportId: string, file: File): Promise<string | null> {
+  if (!supabase) return null;
+  const ext = file.name.split('.').pop();
+  const path = `duty/${dutyReportId}/${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('duty-photos')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) return null;
+
+  const { data: urlData } = supabase.storage.from('duty-photos').getPublicUrl(path);
+
+  await supabase.from('duty_photos').insert({
+    duty_report_id: dutyReportId,
+    storage_path: urlData.publicUrl,
+    original_size: file.size,
+  });
+
+  return urlData.publicUrl;
+}
+
+export async function deleteDutyPhoto(photoId: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from('duty_photos').update({ deleted_at: new Date().toISOString() }).eq('id', photoId);
+  return !error;
 }
 
 // ─── Activity Events ────────────────────────────────────
