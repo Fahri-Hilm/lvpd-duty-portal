@@ -1,43 +1,94 @@
 import { supabase } from './supabase';
-import type { Member, DutyFaction, Rank } from '../types';
-import { mockMembers, mockDuties, ranks } from '../data';
+import type { Profile, DutyFaction } from '../types';
 
-// ─── Members ────────────────────────────────────────────
+// ─── Profiles (Personnel) ───────────────────────────────
 
-export async function fetchMembers(): Promise<Member[]> {
-  if (!supabase) return mockMembers;
+export async function fetchProfiles(): Promise<Profile[]> {
+  if (!supabase) return [];
 
   const { data, error } = await supabase
-    .from('members')
-    .select('id, name, rank, is_active')
+    .from('profiles')
+    .select('*')
     .order('created_at', { ascending: true });
 
-  if (error || !data || data.length === 0) return mockMembers;
+  if (error || !data) return [];
+  return data;
+}
 
-  return data.map(m => ({
-    id: m.id,
-    name: m.name,
-    rank: m.rank ?? 'ANALYST',
-    status: m.is_active ? 'Aktif' as const : 'Nonaktif' as const,
-  }));
+export async function createProfile(input: {
+  full_name: string;
+  rank: string;
+  email: string;
+  role: Profile['role'];
+  codename?: string;
+  status?: Profile['status'];
+  specialization?: string[];
+}): Promise<Profile | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({
+      full_name: input.full_name,
+      rank: input.rank,
+      email: input.email,
+      role: input.role,
+      codename: input.codename ?? null,
+      status: input.status ?? 'active',
+      specialization: input.specialization ?? ['RECON', 'COMBAT'],
+    })
+    .select()
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+export async function updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: updates.full_name,
+      rank: updates.rank,
+      email: updates.email,
+      role: updates.role,
+      codename: updates.codename,
+      status: updates.status,
+      specialization: updates.specialization,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+export async function deleteProfile(id: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 }
 
 // ─── Duty Reports ───────────────────────────────────────
 
 export async function fetchDuties(): Promise<DutyFaction[]> {
-  if (!supabase) return mockDuties;
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('duty_reports')
-    .select(`
-      id, duty_date, on_duty_at, off_duty_at, status, notes, created_at,
-      duty_photos ( storage_path ),
-      members!duty_reports_member_id_fkey ( name, rank )
-    `)
+    .select('*, duty_photos(storage_path)')
     .order('duty_date', { ascending: false })
     .limit(10);
 
-  if (error || !data || data.length === 0) return mockDuties;
+  if (error || !data) return [];
 
   return data.map(d => ({
     id: d.id,
@@ -54,7 +105,7 @@ export async function fetchDuties(): Promise<DutyFaction[]> {
   }));
 }
 
-// ─── Activity Feed ──────────────────────────────────────
+// ─── Activity Events ────────────────────────────────────
 
 export interface ActivityEvent {
   id: string;
@@ -77,22 +128,15 @@ export async function fetchActivityEvents(): Promise<ActivityEvent[]> {
   return data;
 }
 
-// ─── Ranks (static) ────────────────────────────────────
-
-export function getRanks(): Rank[] {
-  return ranks;
-}
-
 // ─── Stats ──────────────────────────────────────────────
 
 export async function fetchStats() {
-  const members = await fetchMembers();
+  const profiles = await fetchProfiles();
   const duties = await fetchDuties();
-  const active = members.filter(m => m.status === 'Aktif').length;
 
   return {
-    activeMembers: active,
-    totalMembers: members.length,
+    activeProfiles: profiles.filter(p => p.status === 'active' || p.status === 'deployed').length,
+    totalProfiles: profiles.length,
     totalDuties: duties.length,
     publishedDuties: duties.filter(d => d.status === 'DIPUBLIKASIKAN').length,
   };

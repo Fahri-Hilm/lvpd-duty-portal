@@ -1,6 +1,5 @@
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { mockDuties } from '../data';
 import { ArrowRight, Activity, MapPin, ShieldCheck, Users, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -9,23 +8,24 @@ import DispatchFeed from '../components/DispatchFeed';
 import SpotlightPanel from '../components/SpotlightPanel';
 import PanelHeader from '../components/PanelHeader';
 import { PanelSkeleton } from '../components/Skeleton';
-import { fetchMembers, fetchDuties } from '../lib/data-service';
-import type { Member, DutyFaction } from '../types';
+import { fetchProfiles, fetchDuties } from '../lib/data-service';
+import type { Profile, DutyFaction } from '../types';
+import { lazy, Suspense } from 'react';
 
 const ActivityChart = lazy(() => import('../components/ActivityChart'));
 const LazyTacticalMap = lazy(() => import('../components/LazyTacticalMap'));
 
 export default function Home() {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [duties, setDuties] = useState<DutyFaction[]>([]);
 
   useEffect(() => {
-    fetchMembers().then(setMembers);
+    fetchProfiles().then(setProfiles);
     fetchDuties().then(setDuties);
   }, []);
 
-  const latestDuty = duties[0] ?? mockDuties[0];
-  const activeMembers = members.length > 0 ? members.filter(m => m.status === 'Aktif').length : 7;
+  const latestDuty = duties[0];
+  const activeProfiles = profiles.filter(p => p.status === 'active' || p.status === 'deployed');
 
   const container = {
     hidden: { opacity: 0 },
@@ -47,16 +47,11 @@ export default function Home() {
       animate="show"
       className="space-y-20"
     >
-      {/* Hero Section */}
       <motion.section variants={item} className="pt-8 pb-12 relative">
         <div className="absolute inset-x-[-3rem] top-[-3rem] bottom-0 -z-10 overflow-hidden border-y border-slate-800/50 bg-slate-950 md:inset-x-[-8rem]">
           <video
             className="absolute inset-0 h-full w-full object-cover opacity-55 saturate-[0.9] contrast-125 motion-reduce:hidden"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
+            autoPlay loop muted playsInline preload="metadata"
             poster="/lvpd-hero-poster.webp"
             aria-hidden="true"
           >
@@ -96,7 +91,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-
           <SpotlightPanel className="hidden self-end border-l border-slate-700/80 pl-6 lg:block">
             <p className="mb-8 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500">Operational brief</p>
             <div className="space-y-7">
@@ -113,27 +107,18 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      {/* Quick Stats & Current Duty — 12-col grid */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* Left col: Stats — 3 cols */}
         <motion.div variants={item} className="lg:col-span-3 flex flex-col gap-6">
-          {/* Personil Aktif */}
           <div className="bg-slate-950/80 border border-slate-800 p-6 flex flex-col relative overflow-hidden group">
             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <PanelHeader icon={Users} title="Personil Aktif" status={`${activeMembers} anggota`} />
-            <p className="text-5xl md:text-6xl font-display font-bold text-slate-50 leading-none">{activeMembers}</p>
+            <PanelHeader icon={Users} title="Personil Aktif" status={`${activeProfiles.length} anggota`} />
+            <p className="text-5xl md:text-6xl font-display font-bold text-slate-50 leading-none">{activeProfiles.length}</p>
             <div className="mt-6 pt-4 border-t border-slate-800 relative z-10">
-              <Link
-                to="/struktur"
-                className="group/link inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-300 hover:text-white transition-colors"
-              >
+              <Link to="/struktur" className="group/link inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-300 hover:text-white transition-colors">
                 Lihat Struktur <ArrowRight className="w-3.5 h-3.5 text-blue-500 group-hover/link:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
-
-          {/* Tingkat Aktivitas */}
           <div className="bg-slate-950/80 border border-slate-800 p-6 flex-1 flex flex-col">
             <PanelHeader icon={Activity} title="Tingkat Aktivitas" status="Minggu 35" />
             <div className="flex-1 w-full min-h-[120px]">
@@ -144,22 +129,14 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Right col: Current Duty — 9 cols */}
         <motion.div variants={item} className="lg:col-span-9">
           <div className="bg-slate-950/80 border border-slate-800 flex flex-col overflow-hidden h-full group relative">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-transparent z-10"></div>
-            {latestDuty.photoUrl && (
+            {latestDuty?.photoUrl && (
               <div className="w-full aspect-video relative overflow-hidden border-b border-slate-800">
                 <div className="absolute inset-0 bg-slate-950/20 z-10 group-hover:bg-transparent transition-colors duration-500"></div>
-                <img
-                  src={latestDuty.photoUrl}
-                  alt="Kegiatan Minggu Ini"
-                  width={1200}
-                  height={675}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-1000"
-                />
+                <img src={latestDuty.photoUrl} alt="Kegiatan Minggu Ini" width={1200} height={675} loading="lazy" decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-1000" />
                 <div className="absolute top-6 left-6 z-20">
                   <span className="inline-flex items-center px-3 py-1 bg-slate-950/80 backdrop-blur-sm border border-slate-800 text-[10px] font-bold uppercase tracking-widest text-cyan-400">
                     {latestDuty.status}
@@ -168,20 +145,20 @@ export default function Home() {
               </div>
             )}
             <div className="p-6 md:p-8 flex flex-col flex-1">
-              <PanelHeader icon={FileText} title="Laporan Terbaru" status={format(new Date(latestDuty.endDate), 'dd MMM yyyy', { locale: id })} />
-              <h4 className="text-2xl md:text-3xl font-display font-bold text-slate-50 mb-2 uppercase">{latestDuty.title}</h4>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-4">
-                Periode: {format(new Date(latestDuty.startDate), 'dd MMM yyyy', { locale: id })} — {format(new Date(latestDuty.endDate), 'dd MMM yyyy', { locale: id })}
-              </p>
-              <p className="mb-6 text-sm leading-relaxed text-slate-400">
-                {latestDuty.description}
-              </p>
-
+              {latestDuty ? (
+                <>
+                  <PanelHeader icon={FileText} title="Laporan Terbaru" status={format(new Date(latestDuty.endDate), 'dd MMM yyyy', { locale: id })} />
+                  <h4 className="text-2xl md:text-3xl font-display font-bold text-slate-50 mb-2 uppercase">{latestDuty.title}</h4>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-4">
+                    Periode: {format(new Date(latestDuty.startDate), 'dd MMM yyyy', { locale: id })} — {format(new Date(latestDuty.endDate), 'dd MMM yyyy', { locale: id })}
+                  </p>
+                  <p className="mb-6 text-sm leading-relaxed text-slate-400">{latestDuty.description}</p>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-600 text-sm">Belum ada laporan</div>
+              )}
               <div className="mt-auto">
-                <Link
-                  to="/duty"
-                  className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-colors"
-                >
+                <Link to="/duty" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-colors">
                   Detail Laporan
                 </Link>
               </div>
@@ -190,7 +167,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* Tactical Operations Center */}
       <motion.section variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DispatchFeed />
         <Suspense fallback={<PanelSkeleton />}>

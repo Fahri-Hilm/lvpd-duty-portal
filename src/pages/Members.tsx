@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { fetchMembers } from '../lib/data-service';
-import { mockMembers } from '../data';
-import type { Member } from '../types';
+import { fetchProfiles } from '../lib/data-service';
+import type { Profile } from '../types';
+
+const statusColor: Record<string, string> = {
+  active: 'text-green-400 bg-green-500/10 border-green-500/20',
+  deployed: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+  standby: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+  offline: 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+};
 
 export default function Members() {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetchMembers().then(setMembers);
+    fetchProfiles().then(setProfiles);
   }, []);
 
-  const source = members.length > 0 ? members : mockMembers;
-  const activeMembers = source.filter(m => m.status === 'Aktif');
-  const filtered = activeMembers.filter(m =>
-    !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.rank.toLowerCase().includes(search.toLowerCase())
+  const filtered = profiles.filter(m =>
+    !search || m.full_name.toLowerCase().includes(search.toLowerCase()) || m.rank.toLowerCase().includes(search.toLowerCase()) || m.codename?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -25,16 +29,11 @@ export default function Members() {
           <h1 className="text-4xl md:text-5xl font-display font-bold uppercase text-slate-50 mb-4">Personil Aktif</h1>
           <p className="text-sm md:text-base text-slate-400 font-medium">Direktori resmi personil Kepolisian Futuristic Daerah Las Venturas.</p>
         </div>
-
         <div className="relative w-full md:w-72">
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama personil..."
-            className="w-full pl-12 pr-4 py-3.5 bg-slate-900 border border-slate-800 text-[11px] font-bold tracking-widest uppercase text-slate-50 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
-          />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama, pangkat, atau codename..."
+            className="w-full pl-12 pr-4 py-3.5 bg-slate-900 border border-slate-800 text-[11px] font-bold tracking-widest uppercase text-slate-50 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600" />
         </div>
       </header>
 
@@ -42,27 +41,30 @@ export default function Members() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-950">
-              <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Nama Anggota</th>
-              <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pangkat</th>
-              <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Status</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Nama</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Codename</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pangkat</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Role</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {filtered.map((member) => (
               <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
-                <td className="px-8 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">
-                  {member.name}
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                  {member.rank}
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap text-right">
-                  <span className="inline-flex items-center px-3 py-1 bg-green-500/10 border border-green-500/20 text-[10px] font-bold uppercase tracking-widest text-green-400">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">{member.full_name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-cyan-400">{member.codename ?? '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-400">{member.rank}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-500">{member.role}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <span className={`inline-flex items-center px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${statusColor[member.status] ?? statusColor.offline}`}>
                     {member.status}
                   </span>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} className="px-6 py-8 text-center text-[11px] font-bold uppercase tracking-widest text-slate-600">Tidak ada personil ditemukan</td></tr>
+            )}
           </tbody>
         </table>
       </div>

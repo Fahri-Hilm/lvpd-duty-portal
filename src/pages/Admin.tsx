@@ -1,9 +1,11 @@
 import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { Lock, FileEdit, Users, LayoutDashboard, LogOut, TrendingUp, Eye, Clock } from 'lucide-react';
-import { mockDuties, mockMembers } from '../data';
+import { Lock, FileEdit, Users, LayoutDashboard, LogOut, TrendingUp, Eye, Clock, Plus, Trash2, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../components/ToastContext';
 import PanelHeader from '../components/PanelHeader';
+import { fetchProfiles, createProfile, updateProfile, deleteProfile, fetchDuties } from '../lib/data-service';
+import EmptyState from '../components/EmptyState';
+import type { Profile, DutyFaction } from '../types';
 
 const AdminActivityChart = lazy(() => import('../components/AdminActivityChart'));
 const AdminDutyEditor = lazy(() => import('../components/AdminDutyEditor'));
@@ -33,6 +35,10 @@ export default function Admin() {
   const [draftStatus, setDraftStatus] = useState<DraftStatus>('draft');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [duties, setDuties] = useState<DutyFaction[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newMember, setNewMember] = useState({ full_name: '', rank: '', email: '', role: 'analyst' as Profile['role'], codename: '' });
 
   // Auto-save indicator
   const updateSaved = useCallback(() => {
@@ -116,8 +122,47 @@ export default function Admin() {
     );
   }
 
-  const currentDuty = mockDuties[0];
-  const activeMembersCount = mockMembers.filter(m => m.status === 'Aktif').length;
+  const currentDuty = duties[0];
+  const activeMembersCount = profiles.filter(p => p.status === 'active' || p.status === 'deployed').length;
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchProfiles().then(setProfiles);
+      fetchDuties().then(setDuties);
+    }
+  }, [isLoggedIn]);
+
+  const handleCreate = async () => {
+    if (!newMember.full_name || !newMember.rank || !newMember.email) {
+      addToast('Nama, pangkat, dan email wajib diisi.', 'error');
+      return;
+    }
+    const created = await createProfile(newMember);
+    if (created) {
+      setProfiles(prev => [...prev, created]);
+      setNewMember({ full_name: '', rank: '', email: '', role: 'analyst', codename: '' });
+      addToast('Personil baru berhasil ditambahkan.', 'success');
+    } else {
+      addToast('Gagal menambahkan personil.', 'error');
+    }
+  };
+
+  const handleUpdate = async (id: string, updates: Partial<Profile>) => {
+    const updated = await updateProfile(id, updates);
+    if (updated) {
+      setProfiles(prev => prev.map(p => p.id === id ? updated : p));
+      setEditingId(null);
+      addToast('Data personil diperbarui.', 'success');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const ok = await deleteProfile(id);
+    if (ok) {
+      setProfiles(prev => prev.filter(p => p.id !== id));
+      addToast('Personil dihapus dari sistem.', 'success');
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
@@ -307,43 +352,70 @@ export default function Admin() {
 
               <div className="p-5 bg-slate-900/80 border border-slate-800">
                 <h3 className="font-display font-bold text-base uppercase text-slate-50 mb-4">Registrasi Personil</h3>
-                <div className="flex flex-col md:flex-row gap-3">
-                  <input type="text" placeholder="NAMA IC (MISAL: JOHN_DOE)" className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500 placeholder:text-slate-700" />
-                  <select className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500">
-                    <option>PILIH PANGKAT</option>
-                    <option>IPDA</option>
-                    <option>IPTU</option>
-                    <option>AKP</option>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input type="text" placeholder="NAMA LENGKAP" value={newMember.full_name}
+                    onChange={(e) => setNewMember(prev => ({ ...prev, full_name: e.target.value }))}
+                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500 placeholder:text-slate-700" />
+                  <input type="text" placeholder="PANGKAT (E.G. IPDA)" value={newMember.rank}
+                    onChange={(e) => setNewMember(prev => ({ ...prev, rank: e.target.value }))}
+                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500 placeholder:text-slate-700" />
+                  <input type="email" placeholder="EMAIL" value={newMember.email}
+                    onChange={(e) => setNewMember(prev => ({ ...prev, email: e.target.value }))}
+                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500 placeholder:text-slate-700" />
+                  <input type="text" placeholder="CODENAME (OPTIONAL)" value={newMember.codename}
+                    onChange={(e) => setNewMember(prev => ({ ...prev, codename: e.target.value }))}
+                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500 placeholder:text-slate-700" />
+                  <select value={newMember.role}
+                    onChange={(e) => setNewMember(prev => ({ ...prev, role: e.target.value as Profile['role'] }))}
+                    className="px-4 py-2.5 bg-slate-950 border border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-50 focus:outline-none focus:border-blue-500">
+                    <option value="admin">Admin</option>
+                    <option value="commander">Commander</option>
+                    <option value="analyst">Analyst</option>
+                    <option value="cadet">Cadet</option>
                   </select>
-                  <button
-                    onClick={() => addToast('Personil baru berhasil didaftarkan ke sistem.', 'success')}
-                    className="px-5 py-2.5 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-blue-500 shrink-0 transition-colors"
-                  >
-                    Tambahkan
+                  <button onClick={handleCreate}
+                    className="px-5 py-2.5 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-blue-500 shrink-0 transition-colors flex items-center justify-center gap-2">
+                    <Plus className="w-3.5 h-3.5" /> Tambahkan
                   </button>
                 </div>
               </div>
 
               <div className="border border-slate-800">
-                <div className="grid grid-cols-[1fr_120px_100px] gap-4 px-6 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <div className="grid grid-cols-[1fr_100px_100px_80px_100px] gap-4 px-6 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
                   <span>Nama</span>
                   <span>Pangkat</span>
+                  <span>Codename</span>
+                  <span>Role</span>
                   <span className="text-right">Aksi</span>
                 </div>
-                {mockMembers.slice(0, 5).map(m => (
-                  <div key={m.id} className="grid grid-cols-[1fr_120px_100px] gap-4 px-6 py-3 border-b border-slate-800/60 last:border-b-0 hover:bg-slate-800/20 transition-colors">
-                    <span className="text-sm font-semibold text-slate-200 self-center">{m.name}</span>
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 self-center">{m.rank}</span>
-                    <div className="text-right self-center">
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-blue-400 mr-3 transition-colors">Edit</button>
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">Nonaktif</button>
+                {profiles.length === 0 ? (
+                  <EmptyState icon={Users} title="Belum ada data" description="Tambahkan personil menggunakan form di atas." />
+                ) : (
+                  profiles.map(p => (
+                    <div key={p.id} className="grid grid-cols-[1fr_100px_100px_80px_100px] gap-4 px-6 py-3 border-b border-slate-800/60 last:border-b-0 hover:bg-slate-800/20 transition-colors items-center">
+                      {editingId === p.id ? (
+                        <input type="text" defaultValue={p.full_name}
+                          onBlur={(e) => handleUpdate(p.id, { full_name: e.target.value })}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUpdate(p.id, { full_name: (e.target as HTMLInputElement).value })}
+                          className="px-2 py-1 bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-blue-500" autoFocus />
+                      ) : (
+                        <span className="text-sm font-semibold text-slate-200 self-center truncate">{p.full_name}</span>
+                      )}
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 self-center">{p.rank}</span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-400 self-center">{p.codename ?? '—'}</span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 self-center">{p.role}</span>
+                      <div className="text-right self-center flex justify-end gap-2">
+                        <button onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                          className="p-1.5 border border-slate-700 text-slate-400 hover:text-blue-400 hover:border-blue-500/30 transition-colors">
+                          <FileEdit className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => handleDelete(p.id)}
+                          className="p-1.5 border border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-colors">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {mockMembers.length > 5 && (
-                  <div className="px-6 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                    ... dan {mockMembers.length - 5} lainnya
-                  </div>
+                  ))
                 )}
               </div>
             </motion.div>

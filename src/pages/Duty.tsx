@@ -1,18 +1,36 @@
-import { mockDuties } from '../data';
+import { useState, useEffect } from 'react';
+import { fetchDuties } from '../lib/data-service';
+import type { DutyFaction } from '../types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar, FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Duty() {
-  // Taking the latest published duty
-  const currentDuty = mockDuties.find(d => d.status === 'DIPUBLIKASIKAN');
+  const [currentDuty, setCurrentDuty] = useState<DutyFaction | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDuties().then(duties => {
+      setCurrentDuty(duties.find(d => d.status === 'DIPUBLIKASIKAN') ?? null);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-20 text-center">
+        <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Memuat laporan...</p>
+      </div>
+    );
+  }
 
   if (!currentDuty) {
     return (
       <div className="py-20 text-center">
-        <h2 className="text-2xl font-serif text-zinc-900 mb-2">Belum Ada Laporan</h2>
-        <p className="text-zinc-500">Laporan minggu ini belum dipublikasikan oleh admin.</p>
+        <h2 className="text-2xl font-display font-bold uppercase text-slate-50 mb-2">Belum Ada Laporan</h2>
+        <p className="text-slate-400">Laporan minggu ini belum dipublikasikan oleh admin.</p>
       </div>
     );
   }

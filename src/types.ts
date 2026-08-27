@@ -3,8 +3,8 @@ export type DutyStatus = 'DRAF' | 'DIPUBLIKASIKAN' | 'DIARSIPKAN';
 export interface DutyFaction {
   id: string;
   title: string;
-  startDate: string; // ISO string
-  endDate: string; // ISO string
+  startDate: string;
+  endDate: string;
   description: string;
   photoUrl: string | null;
   status: DutyStatus;
@@ -12,17 +12,18 @@ export interface DutyFaction {
   publishedAt: string | null;
 }
 
-export type MemberStatus = 'Aktif' | 'Nonaktif';
-
-export interface Member {
+export interface Profile {
   id: string;
-  name: string;
+  full_name: string;
   rank: string;
-  status: MemberStatus;
+  email: string;
+  role: 'admin' | 'commander' | 'analyst';
+  codename: string | null;
+  status: 'active' | 'standby' | 'deployed' | 'offline';
+  specialization: string[];
+  mission_count: number;
+  portrait_url: string | null;
+  created_at: string;
 }
 
-export interface Rank {
-  id: string;
-  name: string;
-  level: number;
-}
+export type UserStatus = Profile['status'];
