@@ -51,6 +51,12 @@ export default function Admin() {
     return () => clearInterval(interval);
   }, [isLoggedIn, updateSaved]);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetchProfiles().then(setProfiles);
+    fetchDuties().then(setDuties);
+  }, [isLoggedIn]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === 'admin123') {
@@ -124,13 +130,6 @@ export default function Admin() {
 
   const currentDuty = duties[0];
   const activeMembersCount = profiles.filter(p => p.status === 'active' || p.status === 'deployed').length;
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchProfiles().then(setProfiles);
-      fetchDuties().then(setDuties);
-    }
-  }, [isLoggedIn]);
 
   const handleCreate = async () => {
     if (!newMember.full_name || !newMember.rank || !newMember.email) {
@@ -236,7 +235,7 @@ export default function Admin() {
                   <div className="flex-1 p-5 bg-slate-900/80 border border-slate-800 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <PanelHeader icon={FileEdit} title="Status Terkini" />
-                    <p className="text-xl font-display font-bold uppercase text-slate-50">{currentDuty.status}</p>
+                    <p className="text-xl font-display font-bold uppercase text-slate-50">{currentDuty?.status ?? '—'}</p>
                   </div>
                   <div className="flex-1 p-5 bg-slate-900/80 border border-slate-800">
                     <PanelHeader icon={Users} title="Anggota Aktif" />
@@ -317,17 +316,17 @@ export default function Admin() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between border-b border-slate-800/60 pb-2">
                       <span className="text-slate-500">Judul</span>
-                      <span className="text-slate-200 font-semibold">{currentDuty.title}</span>
+                      <span className="text-slate-200 font-semibold">{currentDuty?.title ?? '—'}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-800/60 pb-2">
                       <span className="text-slate-500">Status</span>
-                      <span className="text-cyan-400 font-semibold">{currentDuty.status}</span>
+                      <span className="text-cyan-400 font-semibold">{currentDuty?.status ?? '—'}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-800/60 pb-2">
                       <span className="text-slate-500">Periode</span>
-                      <span className="text-slate-300">{currentDuty.startDate} — {currentDuty.endDate}</span>
+                      <span className="text-slate-300">{currentDuty?.startDate ?? '—'} — {currentDuty?.endDate ?? '—'}</span>
                     </div>
-                    <p className="text-slate-400 leading-relaxed pt-2">{currentDuty.description}</p>
+                    <p className="text-slate-400 leading-relaxed pt-2">{currentDuty?.description ?? '—'}</p>
                   </div>
                 </motion.div>
               )}
