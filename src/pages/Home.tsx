@@ -51,13 +51,15 @@ export default function Home() {
         <div className="absolute inset-x-[-3rem] top-[-3rem] bottom-0 -z-10 overflow-hidden border-y border-slate-800/50 bg-slate-950 md:inset-x-[-8rem]">
           <video
             className="absolute inset-0 h-full w-full object-cover opacity-55 saturate-[0.9] contrast-125 motion-reduce:hidden"
-            autoPlay loop muted playsInline preload="metadata"
+            autoPlay loop muted playsInline preload="auto"
             poster="/lvpd-hero-poster.webp"
             aria-hidden="true"
           >
             <source src="/lvpd-hero.webm" type="video/webm" />
             <source src="/lvpd-hero.mp4" type="video/mp4" />
           </video>
+          <img src="/lvpd-hero-poster.webp" alt="" aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover opacity-55 saturate-[0.9] contrast-125 motion-reduce:block md:hidden -z-10" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/60 to-slate-950/20"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950"></div>
           <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]"></div>

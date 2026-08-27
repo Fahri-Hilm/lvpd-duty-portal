@@ -1,73 +1,174 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useToast } from './ToastContext';
-
-const draftStorageKeys = {
-  title: 'lvpd:duty-draft:title',
-  startDate: 'lvpd:duty-draft:start-date',
-  endDate: 'lvpd:duty-draft:end-date',
-  description: 'lvpd:duty-draft:description',
-} as const;
+import { supabase } from '../lib/supabase';
+import { Upload, CheckCircle, X, Image as ImageIcon } from 'lucide-react';
 
 export default function AdminDutyEditor() {
   const [title, setTitle] = useState('DUTY FACTION MINGGU 36');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
-  const [ready, setReady] = useState(false);
-  const [status, setStatus] = useState('Draf lokal aktif');
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [published, setPublished] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
-    setTitle(localStorage.getItem(draftStorageKeys.title) ?? 'DUTY FACTION MINGGU 36');
-    setStartDate(localStorage.getItem(draftStorageKeys.startDate) ?? '');
-    setEndDate(localStorage.getItem(draftStorageKeys.endDate) ?? '');
-    setDescription(localStorage.getItem(draftStorageKeys.description) ?? '');
-    setReady(true);
-  }, []);
+    if (!file) { setPreview(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(draftStorageKeys.title, title);
-    localStorage.setItem(draftStorageKeys.startDate, startDate);
-    localStorage.setItem(draftStorageKeys.endDate, endDate);
-    localStorage.setItem(draftStorageKeys.description, description);
-    setStatus('Tersimpan otomatis');
-  }, [description, endDate, ready, startDate, title]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) {
+      addToast('Ukuran file maksimal 5MB.', 'error');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) {
+      addToast('Format harus JPG, PNG, atau WebP.', 'error');
+      return;
+    }
+    setFile(f);
+  };
+
+  const handlePublish = async () => {
+    if (!supabase) {
+      addToast('Supabase tidak terhubung.', 'error');
+      return;
+    }
+    if (!title || !startDate || !endDate || !description) {
+      addToast('Semua field wajib diisi.', 'error');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      let photoUrl: string | null = null;
+
+      if (file) {
+        const ext = file.name.split('.').pop();
+        const path = `duty/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('duty-photos')
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (uploadErr) throw uploadErr;
+
+        const { data: urlData } = supabase.storage.from('duty-photos').getPublicUrl(path);
+        photoUrl = urlData.publicUrl;
+      }
+
+      const { error: insertErr } = await supabase.from('duty_reports').insert({
+        title,
+        duty_date: startDate,
+        on_duty_at: startDate,
+        off_duty_at: endDate,
+        notes: description,
+        status: 'approved',
+      });
+      if (insertErr) throw insertErr;
+
+      if (photoUrl) {
+        const { data: report } = await supabase
+          .from('duty_reports')
+          .select('id')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (report) {
+          await supabase.from('duty_photos').insert({
+            duty_report_id: report.id,
+            storage_path: photoUrl,
+            caption: title,
+          });
+        }
+      }
+
+      setPublished(true);
+      addToast('Laporan berhasil dipublikasikan.', 'success');
+      setTitle('');
+      setStartDate('');
+      setEndDate('');
+      setDescription('');
+      setFile(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mempublikasikan.';
+      addToast(msg, 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div>
       <h1 className="mb-4 text-3xl font-display font-bold uppercase text-slate-50">Kelola Duty Faction</h1>
       <p className="mb-8 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Buat laporan baru untuk minggu ini. Minimal upload 1 foto kegiatan.</p>
-      <form className="max-w-2xl space-y-6">
+      <form className="max-w-2xl space-y-6" onSubmit={(e) => { e.preventDefault(); handlePublish(); }}>
         <div>
           <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Judul Laporan</label>
-          <input type="text" value={title} onChange={(event) => setTitle(event.target.value)} className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+            className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Periode Mulai</label>
-            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+              className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
           </div>
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Periode Selesai</label>
-            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+              className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
           </div>
         </div>
         <div>
           <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Deskripsi Kegiatan</label>
-          <textarea rows={5} value={description} onChange={(event) => setDescription(event.target.value)} className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors placeholder:text-slate-700 focus:border-blue-500 focus:outline-none" placeholder="Ringkasan kegiatan operasional..." />
+          <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)}
+            className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors placeholder:text-slate-700 focus:border-blue-500 focus:outline-none"
+            placeholder="Ringkasan kegiatan operasional..." />
         </div>
         <div>
           <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Upload Foto/Poster</label>
-          <div className="group cursor-pointer border border-dashed border-slate-700 bg-slate-950 p-12 text-center transition-colors hover:bg-slate-900">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 group-hover:text-blue-400">Klik untuk upload foto kegiatan</p>
-            <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Format: JPG, PNG (Max 5MB)</p>
-          </div>
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
+          {preview ? (
+            <div className="relative border border-slate-800 bg-slate-950 overflow-hidden">
+              <img src={preview} alt="Preview" className="w-full h-48 object-cover" />
+              <button type="button" onClick={() => { setFile(null); setPreview(null); }}
+                className="absolute top-3 right-3 p-1.5 bg-slate-950/80 border border-slate-700 text-red-400 hover:text-red-300 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-slate-950/80 backdrop-blur-sm border border-slate-700">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{file?.name}</span>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="group w-full cursor-pointer border border-dashed border-slate-700 bg-slate-950 p-12 text-center transition-colors hover:bg-slate-900 hover:border-blue-500/40">
+              <ImageIcon className="mx-auto w-8 h-8 text-slate-600 group-hover:text-blue-400 mb-3 transition-colors" />
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 group-hover:text-blue-400">Klik untuk upload foto kegiatan</p>
+              <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Format: JPG, PNG, WebP (Max 5MB)</p>
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-3 pt-6 md:flex-row md:items-center">
-          <button type="button" onClick={() => addToast('Supabase belum terhubung. Laporan belum dipublikasikan.', 'error')} className="bg-blue-600 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-blue-500">Publikasikan Laporan</button>
-          <button type="button" onClick={() => { localStorage.setItem(draftStorageKeys.title, title); setStatus('Draf disimpan lokal'); addToast('Draf laporan disimpan secara lokal.', 'info'); }} className="border border-slate-700 bg-slate-950 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-slate-300 transition-colors hover:bg-slate-900 hover:text-white">Simpan Draf</button>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{status}</span>
+          <button type="submit" disabled={uploading || !title || !startDate || !endDate || !description}
+            className="bg-blue-600 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            {uploading ? (
+              <><span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Mengirim...</>
+            ) : published ? (
+              <><CheckCircle className="w-3.5 h-3.5" /> Terpublikasi</>
+            ) : (
+              'Publikasikan Laporan'
+            )}
+          </button>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            {file ? `${(file.size / 1024 / 1024).toFixed(1)}MB` : 'Belum ada foto'}
+          </span>
         </div>
       </form>
     </div>
