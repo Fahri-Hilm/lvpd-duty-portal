@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .spotlight-panel {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .spotlight-panel::after {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    content: "";
+    opacity: 0;
+    background: radial-gradient(24rem circle at var(--spotlight-x) var(--spotlight-y), rgba(96, 165, 250, 0.13), transparent 62%);
+    transition: opacity 180ms ease-out;
+  }
+
+  .spotlight-panel:hover::after {
+    opacity: 1;
+  }
+
+  .hero-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes command-descend {
+  0% { transform: translateY(-4px); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(46px); opacity: 0; }
+}
+
+.command-pulse {
+  animation: command-descend 2.4s linear infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-panel::after {
+    display: none;
+  }
+
+  .command-pulse {
+    display: none;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}
