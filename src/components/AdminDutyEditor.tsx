@@ -92,8 +92,9 @@ export default function AdminDutyEditor() {
       setDescription('');
       setFile(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal mempublikasikan.';
-      addToast(msg, 'error');
+      console.error('[AdminDutyEditor] publish error:', err);
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      addToast('Gagal: ' + msg, 'error');
     } finally {
       setUploading(false);
     }
