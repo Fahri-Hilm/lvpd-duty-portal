@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { mockDuties, mockMembers } from '../data';
+import { mockDuties } from '../data';
 import { ArrowRight, Activity, MapPin, ShieldCheck, Users, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -9,13 +9,23 @@ import DispatchFeed from '../components/DispatchFeed';
 import SpotlightPanel from '../components/SpotlightPanel';
 import PanelHeader from '../components/PanelHeader';
 import { PanelSkeleton } from '../components/Skeleton';
+import { fetchMembers, fetchDuties } from '../lib/data-service';
+import type { Member, DutyFaction } from '../types';
 
 const ActivityChart = lazy(() => import('../components/ActivityChart'));
 const LazyTacticalMap = lazy(() => import('../components/LazyTacticalMap'));
 
 export default function Home() {
-  const latestDuty = mockDuties[0];
-  const activeMembers = mockMembers.filter(m => m.status === 'Aktif').length;
+  const [members, setMembers] = useState<Member[]>([]);
+  const [duties, setDuties] = useState<DutyFaction[]>([]);
+
+  useEffect(() => {
+    fetchMembers().then(setMembers);
+    fetchDuties().then(setDuties);
+  }, []);
+
+  const latestDuty = duties[0] ?? mockDuties[0];
+  const activeMembers = members.length > 0 ? members.filter(m => m.status === 'Aktif').length : 7;
 
   const container = {
     hidden: { opacity: 0 },

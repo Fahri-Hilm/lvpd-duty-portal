@@ -1,21 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'motion/react';
 import { Shield, UserCheck, LayoutGrid, List, ChevronDown, Search } from 'lucide-react';
-import { mockMembers, ranks } from '../data';
+import { ranks } from '../data';
+import { fetchMembers } from '../lib/data-service';
+import { mockMembers } from '../data';
+import type { Member } from '../types';
 import SpotlightPanel from '../components/SpotlightPanel';
 import PanelHeader from '../components/PanelHeader';
 import EmptyState from '../components/EmptyState';
-
-const occupiedRanks = ranks
-  .map((rank) => ({
-    ...rank,
-    members: mockMembers.filter((m) => m.rank === rank.name && m.status === 'Aktif'),
-  }))
-  .filter((r) => r.members.length > 0)
-  .sort((a, b) => a.level - b.level);
-
-const vacantRanks = ranks.filter((r) => !occupiedRanks.some((o) => o.id === r.id));
-const totalActive = mockMembers.filter((m) => m.status === 'Aktif').length;
 
 type ViewMode = 'bagan' | 'list';
 
@@ -37,13 +29,31 @@ export default function Structure() {
   const [view, setView] = useState<ViewMode>('bagan');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
 
-  const filteredMembers = mockMembers.filter(m => {
+  useEffect(() => {
+    fetchMembers().then(setAllMembers);
+  }, []);
+
+  const source = allMembers.length > 0 ? allMembers : mockMembers;
+
+  const occupiedRanks = ranks
+    .map((rank) => ({
+      ...rank,
+      members: source.filter((m) => m.rank === rank.name && m.status === 'Aktif'),
+    }))
+    .filter((r) => r.members.length > 0)
+    .sort((a, b) => a.level - b.level);
+
+  const vacantRanks = ranks.filter((r) => !occupiedRanks.some((o) => o.id === r.id));
+  const totalActive = source.filter((m) => m.status === 'Aktif').length;
+
+  const filteredMembers = source.filter(m => {
     const matchSearch = !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.rank.toLowerCase().includes(search.toLowerCase());
     return matchSearch;
   });
 
-  const selectedMember = selectedId ? mockMembers.find(m => m.id === selectedId) : null;
+  const selectedMember = selectedId ? source.find(m => m.id === selectedId) : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">

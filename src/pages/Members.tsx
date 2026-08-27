@@ -1,10 +1,22 @@
-import { mockMembers } from '../data';
+import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
+import { fetchMembers } from '../lib/data-service';
+import { mockMembers } from '../data';
+import type { Member } from '../types';
 
 export default function Members() {
-  // Sort members by rank level if we wanted to, but we'll just display them cleanly.
-  // For simplicity, we just list them out.
-  const activeMembers = mockMembers.filter(m => m.status === 'Aktif');
+  const [members, setMembers] = useState<Member[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetchMembers().then(setMembers);
+  }, []);
+
+  const source = members.length > 0 ? members : mockMembers;
+  const activeMembers = source.filter(m => m.status === 'Aktif');
+  const filtered = activeMembers.filter(m =>
+    !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.rank.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-12">
@@ -13,12 +25,14 @@ export default function Members() {
           <h1 className="text-4xl md:text-5xl font-display font-bold uppercase text-slate-50 mb-4">Personil Aktif</h1>
           <p className="text-sm md:text-base text-slate-400 font-medium">Direktori resmi personil Kepolisian Futuristic Daerah Las Venturas.</p>
         </div>
-        
+
         <div className="relative w-full md:w-72">
           <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input 
-            type="text" 
-            placeholder="CARI NAMA PERSONIL..." 
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama personil..."
             className="w-full pl-12 pr-4 py-3.5 bg-slate-900 border border-slate-800 text-[11px] font-bold tracking-widest uppercase text-slate-50 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
           />
         </div>
@@ -34,7 +48,7 @@ export default function Members() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {activeMembers.map((member) => (
+            {filtered.map((member) => (
               <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
                 <td className="px-8 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">
                   {member.name}
@@ -43,7 +57,7 @@ export default function Members() {
                   {member.rank}
                 </td>
                 <td className="px-8 py-4 whitespace-nowrap text-right">
-                  <span className="inline-flex items-center px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                  <span className="inline-flex items-center px-3 py-1 bg-green-500/10 border border-green-500/20 text-[10px] font-bold uppercase tracking-widest text-green-400">
                     {member.status}
                   </span>
                 </td>
