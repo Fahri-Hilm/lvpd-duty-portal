@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar, FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import Breadcrumb from '../components/Breadcrumb';
+import { PanelSkeleton } from '../components/Skeleton';
 
 export default function Duty() {
   const [currentDuty, setCurrentDuty] = useState<DutyFaction | null>(null);
@@ -19,9 +21,9 @@ export default function Duty() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center">
-        <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Memuat laporan...</p>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Breadcrumb />
+        <PanelSkeleton />
       </div>
     );
   }
@@ -41,6 +43,7 @@ export default function Duty() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-4xl mx-auto"
     >
+      <Breadcrumb />
       <header className="mb-12 border-b border-slate-800 pb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-6">
           <CheckCircle className="w-3.5 h-3.5" />

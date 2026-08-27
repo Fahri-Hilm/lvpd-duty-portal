@@ -1,9 +1,9 @@
 import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { Lock, FileEdit, Users, LayoutDashboard, LogOut, TrendingUp, Eye, Clock, Plus, Trash2, Save } from 'lucide-react';
+import { Lock, FileEdit, Users, LayoutDashboard, LogOut, TrendingUp, Eye, Clock, Plus, Trash2, Save, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../components/ToastContext';
 import PanelHeader from '../components/PanelHeader';
-import { fetchProfiles, createProfile, updateProfile, deleteProfile, fetchDuties } from '../lib/data-service';
+import { fetchProfiles, createProfile, updateProfile, deleteProfile, fetchDuties, uploadPortrait } from '../lib/data-service';
 import EmptyState from '../components/EmptyState';
 import type { Profile, DutyFaction } from '../types';
 
@@ -160,6 +160,20 @@ export default function Admin() {
     if (ok) {
       setProfiles(prev => prev.filter(p => p.id !== id));
       addToast('Personil dihapus dari sistem.', 'success');
+    }
+  };
+
+  const handlePortraitUpload = async (id: string, file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      addToast('Ukuran foto maksimal 2MB.', 'error');
+      return;
+    }
+    const url = await uploadPortrait(id, file);
+    if (url) {
+      setProfiles(prev => prev.map(p => p.id === id ? { ...p, portrait_url: url } : p));
+      addToast('Foto berhasil diunggah.', 'success');
+    } else {
+      addToast('Gagal mengunggah foto.', 'error');
     }
   };
 
@@ -380,7 +394,8 @@ export default function Admin() {
               </div>
 
               <div className="border border-slate-800">
-                <div className="grid grid-cols-[1fr_100px_100px_80px_100px] gap-4 px-6 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <div className="grid grid-cols-[48px_1fr_100px_100px_80px_100px] gap-4 px-6 py-3 bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                  <span>Foto</span>
                   <span>Nama</span>
                   <span>Pangkat</span>
                   <span>Codename</span>
@@ -391,7 +406,23 @@ export default function Admin() {
                   <EmptyState icon={Users} title="Belum ada data" description="Tambahkan personil menggunakan form di atas." />
                 ) : (
                   profiles.map(p => (
-                    <div key={p.id} className="grid grid-cols-[1fr_100px_100px_80px_100px] gap-4 px-6 py-3 border-b border-slate-800/60 last:border-b-0 hover:bg-slate-800/20 transition-colors items-center">
+                    <div key={p.id} className="grid grid-cols-[48px_1fr_100px_100px_80px_100px] gap-4 px-6 py-3 border-b border-slate-800/60 last:border-b-0 hover:bg-slate-800/20 transition-colors items-center">
+                      <div className="relative group">
+                        <label className="cursor-pointer block">
+                          <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePortraitUpload(p.id, f); }} />
+                          <div className="w-10 h-10 border border-slate-800 bg-slate-950 flex items-center justify-center overflow-hidden">
+                            {p.portrait_url ? (
+                              <img src={p.portrait_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Camera className="w-4 h-4 text-slate-600 group-hover:text-blue-400 transition-colors" />
+                            )}
+                          </div>
+                          <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Camera className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        </label>
+                      </div>
                       {editingId === p.id ? (
                         <input type="text" defaultValue={p.full_name}
                           onBlur={(e) => handleUpdate(p.id, { full_name: e.target.value })}

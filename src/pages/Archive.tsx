@@ -5,6 +5,8 @@ import type { DutyFaction } from '../types';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { ArrowRight } from 'lucide-react';
+import Breadcrumb from '../components/Breadcrumb';
+import { TableSkeleton } from '../components/Skeleton';
 
 export default function Archive() {
   const [archivedDuties, setArchivedDuties] = useState<DutyFaction[]>([]);
@@ -18,17 +20,15 @@ export default function Archive() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
+    <div className="max-w-4xl mx-auto space-y-8">
+      <Breadcrumb />
       <header className="border-b border-slate-800 pb-10">
         <h1 className="text-4xl md:text-5xl font-display font-bold uppercase text-slate-50 mb-4">Arsip Laporan</h1>
         <p className="text-sm md:text-base text-slate-400 font-medium">Dokumentasi historis kegiatan Duty Faction LVPD dari minggu-minggu sebelumnya.</p>
       </header>
 
       {loading ? (
-        <div className="py-20 text-center">
-          <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">Memuat arsip...</p>
-        </div>
+        <TableSkeleton rows={3} />
       ) : archivedDuties.length === 0 ? (
         <div className="py-20 text-center">
           <p className="text-slate-400">Belum ada arsip laporan.</p>

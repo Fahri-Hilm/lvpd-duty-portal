@@ -6,6 +6,7 @@ import type { Profile } from '../types';
 import SpotlightPanel from '../components/SpotlightPanel';
 import PanelHeader from '../components/PanelHeader';
 import EmptyState from '../components/EmptyState';
+import Breadcrumb from '../components/Breadcrumb';
 
 type ViewMode = 'bagan' | 'list';
 
@@ -82,6 +83,7 @@ export default function Structure() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
+      <Breadcrumb />
       <header className="border-b border-slate-800 pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>

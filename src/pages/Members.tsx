@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { fetchProfiles } from '../lib/data-service';
+import { MemberCardSkeleton } from '../components/Skeleton';
+import Breadcrumb from '../components/Breadcrumb';
 import type { Profile } from '../types';
 
 const statusColor: Record<string, string> = {
@@ -13,9 +15,10 @@ const statusColor: Record<string, string> = {
 export default function Members() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProfiles().then(setProfiles);
+    fetchProfiles().then(p => { setProfiles(p); setLoading(false); });
   }, []);
 
   const filtered = profiles.filter(m =>
@@ -23,7 +26,8 @@ export default function Members() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
+    <div className="max-w-4xl mx-auto space-y-8">
+      <Breadcrumb />
       <header className="border-b border-slate-800 pb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold uppercase text-slate-50 mb-4">Personil Aktif</h1>
@@ -37,35 +41,69 @@ export default function Members() {
         </div>
       </header>
 
-      <div className="bg-slate-900 border border-slate-800 overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-800 bg-slate-950">
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Nama</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Codename</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pangkat</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {filtered.map((member) => (
-              <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">{member.full_name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-cyan-400">{member.codename ?? '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-400">{member.rank}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className={`inline-flex items-center px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${statusColor[member.status] ?? statusColor.offline}`}>
+      {loading ? (
+        <MemberCardSkeleton count={9} />
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-slate-900 border border-slate-800 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950">
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Nama</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Codename</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pangkat</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {filtered.map((member) => (
+                  <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-50">{member.full_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-cyan-400">{member.codename ?? '—'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-[11px] font-bold uppercase tracking-widest text-slate-400">{member.rank}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <span className={`inline-flex items-center px-3 py-1 border text-[10px] font-bold uppercase tracking-widest ${statusColor[member.status] ?? statusColor.offline}`}>
+                        {member.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr><td colSpan={4} className="px-6 py-8 text-center text-[11px] font-bold uppercase tracking-widest text-slate-600">Tidak ada personil ditemukan</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center text-[11px] font-bold uppercase tracking-widest text-slate-600">Tidak ada personil ditemukan</div>
+            ) : (
+              filtered.map((member) => (
+                <div key={member.id} className="bg-slate-900 border border-slate-800 p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 border border-slate-800 bg-slate-950 flex items-center justify-center overflow-hidden">
+                    {member.portrait_url ? (
+                      <img src={member.portrait_url} alt={member.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-bold text-slate-500">{member.full_name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-50 truncate">{member.full_name}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{member.rank}</p>
+                    {member.codename && <p className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">{member.codename}</p>}
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center px-2.5 py-1 border text-[9px] font-bold uppercase tracking-widest ${statusColor[member.status] ?? statusColor.offline}`}>
                     {member.status}
                   </span>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-[11px] font-bold uppercase tracking-widest text-slate-600">Tidak ada personil ditemukan</td></tr>
+                </div>
+              ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

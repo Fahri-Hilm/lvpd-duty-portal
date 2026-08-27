@@ -77,6 +77,27 @@ export async function deleteProfile(id: string): Promise<boolean> {
   return !error;
 }
 
+export async function uploadPortrait(id: string, file: File): Promise<string | null> {
+  if (!supabase) return null;
+
+  const ext = file.name.split('.').pop();
+  const path = `${id}-${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('character-portraits')
+    .upload(path, file, { contentType: file.type, upsert: true });
+  if (uploadErr) return null;
+
+  const { data: urlData } = supabase.storage.from('character-portraits').getPublicUrl(path);
+
+  const { error: updateErr } = await supabase
+    .from('profiles')
+    .update({ portrait_url: urlData.publicUrl })
+    .eq('id', id);
+  if (updateErr) return null;
+
+  return urlData.publicUrl;
+}
+
 // ─── Duty Reports ───────────────────────────────────────
 
 export interface DutyRow {
