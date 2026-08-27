@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { Upload, CheckCircle, X, Image as ImageIcon } from 'lucide-react';
 
 export default function AdminDutyEditor() {
-  const [title, setTitle] = useState('DUTY FACTION MINGGU 36');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
@@ -41,16 +40,35 @@ export default function AdminDutyEditor() {
       addToast('Supabase tidak terhubung.', 'error');
       return;
     }
-    if (!title || !startDate || !endDate || !description) {
+    if (!startDate || !endDate || !description) {
       addToast('Semua field wajib diisi.', 'error');
       return;
     }
 
     setUploading(true);
     try {
-      let photoUrl: string | null = null;
+      // Pick first available member as member_id (required NOT NULL)
+      const { data: members } = await supabase.from('members').select('id').limit(1);
+      const memberId = members?.[0]?.id;
+      if (!memberId) {
+        addToast('Tidak ada data member di database.', 'error');
+        setUploading(false);
+        return;
+      }
 
-      if (file) {
+      // Insert duty report
+      const { data: report, error: insertErr } = await supabase.from('duty_reports').insert({
+        member_id: memberId,
+        duty_date: startDate,
+        on_duty_at: startDate + 'T00:00:00Z',
+        off_duty_at: endDate + 'T23:59:59Z',
+        notes: description,
+        status: 'approved',
+      }).select('id').single();
+      if (insertErr) throw insertErr;
+
+      // Upload photo if provided
+      if (file && report) {
         const ext = file.name.split('.').pop();
         const path = `duty/${Date.now()}.${ext}`;
         const { error: uploadErr } = await supabase.storage
@@ -59,38 +77,16 @@ export default function AdminDutyEditor() {
         if (uploadErr) throw uploadErr;
 
         const { data: urlData } = supabase.storage.from('duty-photos').getPublicUrl(path);
-        photoUrl = urlData.publicUrl;
-      }
 
-      const { error: insertErr } = await supabase.from('duty_reports').insert({
-        title,
-        duty_date: startDate,
-        on_duty_at: startDate,
-        off_duty_at: endDate,
-        notes: description,
-        status: 'approved',
-      });
-      if (insertErr) throw insertErr;
-
-      if (photoUrl) {
-        const { data: report } = await supabase
-          .from('duty_reports')
-          .select('id')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        if (report) {
-          await supabase.from('duty_photos').insert({
-            duty_report_id: report.id,
-            storage_path: photoUrl,
-            caption: title,
-          });
-        }
+        await supabase.from('duty_photos').insert({
+          duty_report_id: report.id,
+          storage_path: urlData.publicUrl,
+          original_size: file.size,
+        });
       }
 
       setPublished(true);
       addToast('Laporan berhasil dipublikasikan.', 'success');
-      setTitle('');
       setStartDate('');
       setEndDate('');
       setDescription('');
@@ -108,19 +104,14 @@ export default function AdminDutyEditor() {
       <h1 className="mb-4 text-3xl font-display font-bold uppercase text-slate-50">Kelola Duty Faction</h1>
       <p className="mb-8 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Buat laporan baru untuk minggu ini. Minimal upload 1 foto kegiatan.</p>
       <form className="max-w-2xl space-y-6" onSubmit={(e) => { e.preventDefault(); handlePublish(); }}>
-        <div>
-          <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Judul Laporan</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
-        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Periode Mulai</label>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Tanggal Mulai Duty</label>
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
               className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
           </div>
           <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Periode Selesai</label>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Tanggal Selesai Duty</label>
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
               className="w-full border border-slate-800 bg-slate-950 px-4 py-3.5 text-sm font-medium text-slate-50 transition-colors focus:border-blue-500 focus:outline-none" />
           </div>
@@ -156,7 +147,7 @@ export default function AdminDutyEditor() {
           )}
         </div>
         <div className="flex flex-col gap-3 pt-6 md:flex-row md:items-center">
-          <button type="submit" disabled={uploading || !title || !startDate || !endDate || !description}
+          <button type="submit" disabled={uploading || !startDate || !endDate || !description}
             className="bg-blue-600 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
             {uploading ? (
               <><span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Mengirim...</>
