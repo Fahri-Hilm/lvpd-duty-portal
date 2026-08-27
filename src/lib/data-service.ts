@@ -140,14 +140,27 @@ export async function updateDuty(id: string, updates: {
   status?: string;
 }): Promise<boolean> {
   if (!supabase) return false;
-  const { error } = await supabase.from('duty_reports').update(updates).eq('id', id);
-  return !error;
+  const { data, error } = await supabase.from('duty_reports').update(updates).eq('id', id).select('id');
+  if (error) {
+    console.error('[updateDuty] error:', error.message, error.code, error.details);
+    return false;
+  }
+  return true;
 }
 
 export async function deleteDuty(id: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { error } = await supabase.from('duty_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
-  return !error;
+  if (!supabase) { console.error('[deleteDuty] supabase not initialized'); return false; }
+  const { data, error } = await supabase
+    .from('duty_reports')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id');
+  if (error) {
+    console.error('[deleteDuty] error:', error.message, error.code, error.details);
+    return false;
+  }
+  console.log('[deleteDuty] success, affected:', data);
+  return true;
 }
 
 export async function uploadDutyPhoto(dutyReportId: string, file: File): Promise<string | null> {
