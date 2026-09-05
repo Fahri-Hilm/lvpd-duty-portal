@@ -8,6 +8,7 @@ import DispatchFeed from '../components/DispatchFeed';
 import SpotlightPanel from '../components/SpotlightPanel';
 import PanelHeader from '../components/PanelHeader';
 import { PanelSkeleton } from '../components/Skeleton';
+import { FogCanvas, ForegroundSilhouette, ScrollProgress } from '../components/LvpdHeroFx';
 import { fetchProfiles, fetchDuties } from '../lib/data-service';
 import type { Profile, DutyFaction } from '../types';
 import { lazy, Suspense } from 'react';
@@ -47,6 +48,7 @@ export default function Home() {
       animate="show"
       className="space-y-20"
     >
+      <ScrollProgress />
       <motion.section variants={item} className="pt-8 pb-12 relative">
         <div className="absolute inset-x-[-3rem] top-[-3rem] bottom-0 -z-10 overflow-hidden border-y border-slate-800/50 bg-slate-950 md:inset-x-[-8rem]">
           <video
@@ -60,10 +62,13 @@ export default function Home() {
           </video>
           <img src="/lvpd-hero-poster.webp" alt="" aria-hidden="true"
             className="absolute inset-0 h-full w-full object-cover opacity-55 saturate-[0.9] contrast-125 motion-reduce:block md:hidden -z-10" />
+          <FogCanvas className="absolute inset-0 h-full w-full opacity-70 motion-reduce:hidden" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/60 to-slate-950/20"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950"></div>
           <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]"></div>
           <div className="hero-grain absolute inset-0 opacity-[0.035]" aria-hidden="true"></div>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 90% at 50% 40%, transparent 45%, rgba(2,6,23,.6) 100%)' }} aria-hidden="true"></div>
+          <ForegroundSilhouette />
         </div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[120px] rounded-full pointer-events-none"></div>
         <div className="grid grid-cols-1 gap-12 pb-8 lg:grid-cols-[minmax(0,1fr)_14rem] lg:gap-20">
@@ -92,6 +97,20 @@ export default function Home() {
                 Lihat personel <Users className="h-4 w-4 text-blue-400" />
               </Link>
             </div>
+            <nav aria-label="Chapter" className="mt-10 grid grid-cols-3 gap-3 border-t border-slate-800/80 pt-5">
+              <a href="#laporan" className="group flex items-start gap-3 text-left">
+                <span className="font-display text-lg font-bold text-slate-600 transition-colors group-hover:text-cyan-300">01</span>
+                <span><span className="block text-[10px] font-bold uppercase tracking-widest text-slate-300">Laporan</span><span className="block text-[10px] text-slate-600">Duty terbaru</span></span>
+              </a>
+              <a href="#personil" className="group flex items-start gap-3 text-left">
+                <span className="font-display text-lg font-bold text-slate-600 transition-colors group-hover:text-cyan-300">02</span>
+                <span><span className="block text-[10px] font-bold uppercase tracking-widest text-slate-300">Personil</span><span className="block text-[10px] text-slate-600">Status aktif</span></span>
+              </a>
+              <a href="#dispatch" className="group flex items-start gap-3 text-left">
+                <span className="font-display text-lg font-bold text-slate-600 transition-colors group-hover:text-cyan-300">03</span>
+                <span><span className="block text-[10px] font-bold uppercase tracking-widest text-slate-300">Dispatch</span><span className="block text-[10px] text-slate-600">Live feed</span></span>
+              </a>
+            </nav>
           </div>
           <SpotlightPanel className="hidden self-end border-l border-slate-700/80 pl-6 lg:block">
             <p className="mb-8 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500">Operational brief</p>
@@ -109,9 +128,9 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <section id="laporan" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-24">
         <motion.div variants={item} className="lg:col-span-3 flex flex-col gap-6">
-          <div className="bg-slate-950/80 border border-slate-800 p-6 flex flex-col relative overflow-hidden group">
+          <div id="personil" className="bg-slate-950/80 border border-slate-800 p-6 flex flex-col relative overflow-hidden group scroll-mt-24">
             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <PanelHeader icon={Users} title="Personil Aktif" status={`${activeProfiles.length} anggota`} />
             <p className="text-5xl md:text-6xl font-display font-bold text-slate-50 leading-none">{activeProfiles.length}</p>
@@ -169,7 +188,7 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <motion.section variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.section variants={item} id="dispatch" className="grid grid-cols-1 lg:grid-cols-2 gap-6 scroll-mt-24">
         <DispatchFeed />
         <Suspense fallback={<PanelSkeleton />}>
           <LazyTacticalMap />
