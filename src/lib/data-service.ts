@@ -119,8 +119,7 @@ export async function fetchDuties(): Promise<DutyFaction[]> {
     .from('duty_reports')
     .select('*, duty_photos(storage_path)')
     .is('deleted_at', null)
-    .order('duty_date', { ascending: false })
-    .limit(10);
+    .order('duty_date', { ascending: false });
 
   if (error || !data) return [];
 

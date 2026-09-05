@@ -38,7 +38,7 @@ export default function Archive() {
           {archivedDuties.map((duty) => (
             <Link
               key={duty.id}
-              to={`/duty`}
+              to={`/duty?id=${encodeURIComponent(duty.id)}`}
               className="group block bg-slate-900 border border-slate-800 p-6 md:p-8 hover:border-blue-500/50 transition-colors relative overflow-hidden"
             >
               <div className="absolute left-0 top-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
