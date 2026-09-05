@@ -22,7 +22,9 @@ export default function AdminDutyEditor() {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const deleteTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const { addToast } = useToast();
 
   const loadDuties = async () => {
@@ -67,23 +69,39 @@ export default function AdminDutyEditor() {
     setView('edit');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin hapus laporan ini?')) return;
-    const ok = await deleteDuty(id);
-    if (ok) {
-      setDuties(prev => prev.filter(d => d.id !== id));
-      addToast('Laporan dihapus.', 'success');
-    } else {
-      addToast('Gagal menghapus laporan.', 'error');
-    }
+  const handleDelete = (id: string) => {
+    const deleted = duties.find(duty => duty.id === id);
+    if (!deleted) return;
+    setDuties(prev => prev.filter(duty => duty.id !== id));
+    const timer = setTimeout(async () => {
+      deleteTimers.current.delete(id);
+      const ok = await deleteDuty(id);
+      if (ok) return;
+      setDuties(prev => prev.some(duty => duty.id === id) ? prev : [...prev, deleted].sort((a, b) => b.duty_date.localeCompare(a.duty_date)));
+      addToast('Gagal menghapus laporan. Data dipulihkan.', 'error');
+    }, 9000);
+    deleteTimers.current.set(id, timer);
+    addToast('Laporan dijadwalkan untuk dihapus.', 'warning', {
+      label: 'Batalkan',
+      onClick: () => {
+        const pending = deleteTimers.current.get(id);
+        if (pending) clearTimeout(pending);
+        deleteTimers.current.delete(id);
+        setDuties(prev => prev.some(duty => duty.id === id) ? prev : [...prev, deleted].sort((a, b) => b.duty_date.localeCompare(a.duty_date)));
+      },
+    });
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    setSavingStatusId(id);
     const ok = await updateDuty(id, { status: newStatus });
     if (ok) {
       setDuties(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
-      addToast(`Status diubah ke ${newStatus}.`, 'success');
+      addToast(`Status diubah ke ${statusLabel(newStatus).text}.`, 'success');
+    } else {
+      addToast('Gagal mengubah status laporan.', 'error');
     }
+    setSavingStatusId(null);
   };
 
   const handleSubmit = async () => {
@@ -137,7 +155,7 @@ export default function AdminDutyEditor() {
           await uploadDutyPhoto(report.id, file);
         }
 
-        addToast('Laporan berhasil dipublikasikan.', 'success');
+        addToast('Laporan berhasil disimpan.', 'success');
       }
 
       resetForm();
@@ -178,7 +196,7 @@ export default function AdminDutyEditor() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-display font-bold uppercase text-slate-50">Kelola Duty Faction</h1>
+            <h1 className="text-2xl font-display font-bold uppercase text-slate-50">Kelola Laporan Duty</h1>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mt-1">Daftar laporan duty mingguan.</p>
           </div>
           <button onClick={openCreate}
@@ -223,20 +241,20 @@ export default function AdminDutyEditor() {
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">{d.duty_date}</span>
                   <div>
-                    <select value={d.status}
+                    <select value={d.status} disabled={savingStatusId === d.id}
                       onChange={(e) => handleStatusChange(d.id, e.target.value)}
-                      className={`px-2 py-1 border text-[9px] font-bold uppercase tracking-widest bg-transparent focus:outline-none cursor-pointer ${sl.color}`}>
+                      className={`px-2 py-1 border text-[9px] font-bold uppercase tracking-widest bg-transparent focus:outline-none cursor-pointer disabled:cursor-wait disabled:opacity-50 ${sl.color}`}>
                       <option value="pending">Draf</option>
                       <option value="approved">Dipublikasikan</option>
                       <option value="rejected">Diarsipkan</option>
                     </select>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => openEdit(d)}
+                     <button aria-label={`Edit laporan ${d.duty_date}`} onClick={() => openEdit(d)}
                       className="p-1.5 border border-slate-700 text-slate-400 hover:text-blue-400 hover:border-blue-500/30 transition-colors">
                       <FileEdit className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => handleDelete(d.id)}
+                     <button aria-label={`Hapus laporan ${d.duty_date}`} onClick={() => handleDelete(d.id)}
                       className="p-1.5 border border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -306,7 +324,7 @@ export default function AdminDutyEditor() {
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
           {preview ? (
             <div className="relative border border-slate-800 bg-slate-950 overflow-hidden">
-              <img src={preview} alt="Preview" className="w-full h-48 object-cover" />
+              <img src={preview} alt="Pratinjau" className="w-full h-48 object-cover" />
               <button type="button" onClick={() => { setFile(null); setPreview(null); }}
                 className="absolute top-3 right-3 p-1.5 bg-slate-950/80 border border-slate-700 text-red-400 hover:text-red-300 transition-colors">
                 <X className="w-4 h-4" />
@@ -331,11 +349,11 @@ export default function AdminDutyEditor() {
           <button type="submit" disabled={submitting || !startDate || !endDate || !description}
             className="bg-blue-600 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
             {submitting ? (
-              <><span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Mengirim...</>
+              <><span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
             ) : isEdit ? (
               'Simpan Perubahan'
             ) : (
-              'Publikasikan Laporan'
+              'Simpan Laporan'
             )}
           </button>
           <button type="button" onClick={() => { resetForm(); setView('list'); }}
@@ -343,7 +361,7 @@ export default function AdminDutyEditor() {
             Batal
           </button>
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            {file ? `${(file.size / 1024 / 1024).toFixed(1)}MB` : isEdit ? 'Foto existing dipertahankan' : 'Belum ada foto'}
+            {file ? `${(file.size / 1024 / 1024).toFixed(1)}MB` : isEdit ? 'Foto lama dipertahankan' : 'Belum ada foto'}
           </span>
         </div>
       </form>
