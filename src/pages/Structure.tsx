@@ -36,14 +36,9 @@ const rankHierarchy: { rank: string; level: number; label: string }[] = [
   { rank: 'Bhayangkara Satu', level: 10, label: 'Bhayangkara Satu' },
 ];
 
-function getRankLevel(rank: string): number {
-  const match = rankHierarchy.find(r => r.rank === rank);
-  return match?.level ?? 99;
-}
-
-function getRankLabel(rank: string): string {
-  const match = rankHierarchy.find(r => r.rank === rank);
-  return match?.label ?? rank;
+function normalizeRank(rank: string): string {
+  if (rank.trim().toUpperCase() === 'KOMPOL') return 'Komisaris Polisi';
+  return rank.trim();
 }
 
 export default function Structure() {
@@ -59,9 +54,8 @@ export default function Structure() {
 
   const rankMap = new Map<string, Profile[]>();
   profiles.forEach(p => {
-    const key = p.rank;
-    if (!rankMap.has(key)) rankMap.set(key, []);
-    rankMap.get(key)!.push(p);
+    const key = normalizeRank(p.rank);
+    rankMap.set(key, [...(rankMap.get(key) ?? []), p]);
   });
 
   const grouped = rankHierarchy
@@ -70,7 +64,7 @@ export default function Structure() {
       rank: r.rank,
       level: r.level,
       label: r.label,
-      members: rankMap.get(r.rank)!,
+      members: rankMap.get(r.rank) ?? [],
     }));
 
   const totalActive = profiles.filter(p => p.status === 'active' || p.status === 'deployed').length;
