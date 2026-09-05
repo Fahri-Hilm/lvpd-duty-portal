@@ -60,7 +60,7 @@ export default function DispatchFeed() {
     <div className="bg-slate-950/80 border border-slate-800 p-6 flex flex-col h-full min-h-[300px] relative overflow-hidden group">
       <div className="absolute top-0 left-0 w-full h-1 bg-cyan-500/50"></div>
 
-      <PanelHeader icon={Terminal} title="Live Dispatch Feed" live />
+      <PanelHeader icon={Terminal} title="Simulasi Dispatch" status="Data demo" />
 
       <div
         ref={containerRef}
