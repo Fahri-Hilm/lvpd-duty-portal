@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -119,7 +120,7 @@ export function FogCanvas({ className = '' }: { className?: string }) {
   return <canvas ref={ref} aria-hidden="true" className={className} />;
 }
 
-export function ForegroundSilhouette() {
+function ForegroundSilhouette() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-28 md:h-36">
       <svg
@@ -138,6 +139,30 @@ export function ForegroundSilhouette() {
       <div className="absolute left-[14%] top-3 h-1 w-1 rounded-full bg-blue-400/80 blur-[1px]" />
       <div className="absolute right-[18%] top-1 h-1.5 w-1.5 rounded-full bg-blue-400/70 blur-[1px]" />
     </div>
+  );
+}
+
+export function HeroParallaxLayers() {
+  const { scrollY } = useScroll();
+  const reduced = useReducedMotion();
+  const gridY = useTransform(scrollY, [0, 800], [0, 24]);
+  const fogY = useTransform(scrollY, [0, 800], [0, 64]);
+  const skylineY = useTransform(scrollY, [0, 800], [0, 36]);
+
+  return (
+    <>
+      <motion.div className="absolute inset-0" style={reduced ? undefined : { y: fogY }}>
+        <FogCanvas className="h-full w-full opacity-70 motion-reduce:hidden" />
+      </motion.div>
+      <motion.div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]"
+        style={reduced ? undefined : { y: gridY }}
+      />
+      <motion.div className="absolute inset-0" style={reduced ? undefined : { y: skylineY }}>
+        <ForegroundSilhouette />
+      </motion.div>
+    </>
   );
 }
 
