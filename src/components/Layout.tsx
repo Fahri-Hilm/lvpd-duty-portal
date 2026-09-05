@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router';
-import { Shield, Menu, X } from 'lucide-react';
+import { Shield, Menu, X, House, ClipboardList, Users, Network } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function Layout() {
@@ -13,6 +13,13 @@ export default function Layout() {
     { name: 'Arsip', path: '/arsip' },
     { name: 'Anggota', path: '/anggota' },
     { name: 'Struktur', path: '/struktur' },
+  ];
+
+  const mobilePrimaryLinks = [
+    { name: 'Beranda', path: '/', icon: House },
+    { name: 'Duty', path: '/duty', icon: ClipboardList },
+    { name: 'Anggota', path: '/anggota', icon: Users },
+    { name: 'Struktur', path: '/struktur', icon: Network },
   ];
 
   const closeMenu = () => setIsMobileMenuOpen(false);
@@ -41,7 +48,7 @@ export default function Layout() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
+            {navLinks.filter(link => link.path === '/arsip').map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
@@ -95,17 +102,17 @@ export default function Layout() {
               onClick={closeMenu}
               className="text-sm font-bold uppercase tracking-widest text-slate-400 hover:text-slate-50"
             >
-              Admin Login
+              Masuk Admin
             </Link>
             <a href="https://discord.gg/vNnYfCqtZH" target="_blank" rel="noreferrer" onClick={closeMenu} className="text-sm font-bold uppercase tracking-widest text-cyan-400 hover:text-cyan-300">
-              Discord Community
+              Komunitas Discord
             </a>
           </div>
         )}
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-12 md:py-16 relative z-10">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-6 pt-12 pb-28 md:py-16 relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -120,7 +127,7 @@ export default function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-950 py-12 mt-auto relative z-10">
+      <footer className="border-t border-slate-800 bg-slate-950 pt-12 pb-28 md:py-12 mt-auto relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-slate-400">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-slate-900 border border-slate-800 flex items-center justify-center">
@@ -133,12 +140,33 @@ export default function Layout() {
           </div>
           <div className="flex flex-col text-left md:text-right">
              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status Sistem</span>
-             <p className="text-[11px] font-semibold text-slate-300 flex items-center gap-2 md:justify-end">
-               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Online & Secured
-             </p>
+               <p className="text-[11px] font-semibold text-slate-300 flex items-center gap-2 md:justify-end">
+               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Online dan aman
+               </p>
           </div>
         </div>
       </footer>
+
+      <nav aria-label="Navigasi utama seluler" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-slate-950/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-4">
+          {mobilePrimaryLinks.map(link => {
+            const Icon = link.icon;
+            const active = location.pathname === link.path;
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                aria-current={active ? 'page' : undefined}
+                onClick={closeMenu}
+                className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 ${active ? 'text-blue-400' : 'text-slate-500'}`}
+              >
+                <Icon className="h-4 w-4" />
+                {link.name}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

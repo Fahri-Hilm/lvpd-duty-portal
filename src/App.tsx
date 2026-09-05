@@ -16,7 +16,7 @@ function RouteLoading() {
     <div className="flex min-h-[18rem] items-center justify-center border border-slate-800 bg-slate-900/70">
       <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
         <span className="h-2 w-2 animate-pulse bg-cyan-400" />
-        Loading secure channel
+        Memuat kanal aman
       </div>
     </div>
   );
