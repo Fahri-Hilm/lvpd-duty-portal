@@ -71,10 +71,36 @@ LVPD feels like a live operations briefing: calm, exact, and cinematic. The sign
 - States: default, active underline, hover, focus-visible, expanded mobile menu.
 - Motion: 180ms opacity/transform transitions only.
 
+### Mobile bottom navigation
+- Structure: four primary destinations with icon, label, and active state; secondary routes stay in the header menu.
+- Surface: fixed slate navigation above device safe area, visible below 768px only.
+- Accessibility: active destination uses `aria-current`; main and footer reserve navigation height.
+
+### Filter toolbar
+- Search and select controls synchronize with URL query parameters so state survives refresh and sharing.
+- Labels stay visible to assistive technology; results update without navigation.
+
+### Member detail drawer
+- Native modal dialog with backdrop, Escape dismissal, close control, portrait, status, rank, specialization, and mission count.
+- Trigger state is stored in the URL and remains keyboard accessible.
+
+### Duty timeline
+- Chronological rail on mobile and desktop with a selected report detail surface.
+- Public timeline excludes drafts; status and period filters persist in the URL.
+
+### Actionable toast
+- Mutation states use direct Indonesian labels: Menyimpan, Tersimpan, and Gagal.
+- Destructive actions are optimistic and provide a short Batalkan action before server deletion.
+
 ### Evidence rail
 - Structure: three compact operational facts below hero content.
 - Surface: tonal shift with one-pixel border; square corners.
 - Accessibility: facts remain readable without video and at reduced motion.
+
+### Chapter heading
+- Structure: two-digit chapter marker, operational overline, display title, and concise context.
+- Entry: opacity plus vertical transform when chapter enters the viewport.
+- Accessibility: semantic heading order remains intact; no information depends on motion.
 
 ### Skeleton loader
 - Pattern: gradient shimmer animation on `bg-slate-800/60` blocks.
@@ -89,6 +115,7 @@ LVPD feels like a live operations briefing: calm, exact, and cinematic. The sign
 
 - Entry: 400-600ms cubic-bezier(0.16, 1, 0.3, 1), opacity + transform.
 - Controls: 180ms ease-out; hover uses transform/opacity/color only.
+- Hero depth: fog, grid, and skyline translate at separate low velocities during scroll.
 - `prefers-reduced-motion: reduce` disables non-essential motion and hides video movement while preserving its first frame.
 - Radar animation pauses when tab is hidden (`visibilitychange`).
 - Every link and button has visible `focus-visible` treatment.
@@ -103,6 +130,7 @@ Mixed strategy: tonal shifts establish hierarchy, structural borders clarify ope
 - Body contrast target 4.5:1; large display text target 3:1.
 - Video is muted, decorative, and never required to understand content.
 - Keyboard focus must remain visible on every interactive element.
+- Claims such as live or real-time are used only for subscribed data; simulated dispatch is labeled explicitly.
 - Accepted debt: data remains mock/local until Supabase table schema and RLS policy are supplied.
 
 ## 9. Panel Standard (Beranda)
